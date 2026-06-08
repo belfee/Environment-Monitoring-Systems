@@ -1,0 +1,43 @@
+#define PIR_PIN 3
+#define IR_PIN 4
+
+void setup() {
+
+  Serial.begin(115200);
+
+  pinMode(PIR_PIN, INPUT);
+  pinMode(IR_PIN, INPUT);
+
+  Serial.println("ACTIVITY NODE READY");
+}
+
+void loop() {
+
+  Serial.println("\n===== ACTIVITY NODE =====");
+
+  // PIR
+
+  int motionValue =
+      digitalRead(PIR_PIN);
+
+  Serial.print("Motion: ");
+
+  if (motionValue == HIGH)
+    Serial.println("DETECTED");
+  else
+    Serial.println("NO MOTION");
+
+  // IR
+
+  int irValue =
+      digitalRead(IR_PIN);
+
+  Serial.print("IR: ");
+
+  if (irValue == LOW)
+    Serial.println("OBJECT DETECTED");
+  else
+    Serial.println("NO OBJECT");
+
+  delay(1000);
+}

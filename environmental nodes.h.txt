@@ -1,0 +1,100 @@
+#include <Wire.h>
+#include <BH1750.h>
+#include <DHT.h>
+
+#define DHTPIN 5
+#define DHTTYPE DHT22
+
+#define RAIN_DO 6
+#define RAIN_AO 1
+
+#define SOIL_DO 14
+#define SOIL_AO 16
+
+#define UV_PIN 17
+
+DHT dht(DHTPIN, DHTTYPE);
+BH1750 lightMeter;
+
+void setup() {
+
+  Serial.begin(115200);
+
+  dht.begin();
+
+  pinMode(RAIN_DO, INPUT);
+
+  pinMode(SOIL_DO, INPUT);
+
+  Wire.begin(42, 45);
+
+  if (lightMeter.begin()) {
+    Serial.println("BH1750 OK");
+  }
+  else {
+    Serial.println("BH1750 FAIL");
+  }
+
+  Serial.println("ENV NODE READY");
+}
+
+void loop() {
+
+  Serial.println("\n===== ENV NODE =====");
+
+  // DHT22
+  float humidity = dht.readHumidity();
+  float temperature = dht.readTemperature();
+
+  if (!isnan(temperature) && !isnan(humidity)) {
+
+    Serial.print("Temperature: ");
+    Serial.print(temperature);
+    Serial.println(" C");
+
+    Serial.print("Humidity: ");
+    Serial.print(humidity);
+    Serial.println(" %");
+  }
+
+  // BH1750
+  float lux = lightMeter.readLightLevel();
+
+  Serial.print("Light: ");
+  Serial.print(lux);
+  Serial.println(" lux");
+
+  // Rain
+  int rainDO = digitalRead(RAIN_DO);
+  int rainAO = analogRead(RAIN_AO);
+
+  Serial.print("Rain DO: ");
+  Serial.println(rainDO);
+
+  Serial.print("Rain AO: ");
+  Serial.println(rainAO);
+
+  // Soil
+  int soilDO = digitalRead(SOIL_DO);
+  int soilAO = analogRead(SOIL_AO);
+
+  Serial.print("Soil DO: ");
+  Serial.println(soilDO);
+
+  Serial.print("Soil AO: ");
+  Serial.println(soilAO);
+
+  // UV
+  int uvRaw = analogRead(UV_PIN);
+
+  float uvVoltage =
+      uvRaw * 3.3 / 4095.0;
+
+  Serial.print("UV Raw: ");
+  Serial.println(uvRaw);
+
+  Serial.print("UV Voltage: ");
+  Serial.println(uvVoltage);
+
+  delay(2000);
+}
