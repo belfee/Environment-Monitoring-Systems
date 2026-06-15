@@ -1,0 +1,119 @@
+#include <Wire.h>
+#include <BH1750.h>
+#include <DHT.h>
+#include <esp_now.h>
+#include <WiFi.h>
+
+#define DHTPIN 5
+#define DHTTYPE DHT22
+
+#define RAIN_DO 6
+#define RAIN_AO 1
+
+#define SOIL_DO 14
+#define SOIL_AO 16
+
+#define UV_PIN 17
+
+DHT dht(DHTPIN, DHTTYPE);
+BH1750 lightMeter;
+
+// NHẬP ĐỊA CHỈ MAC CỦA MẠCH NHẬN VÀO ĐÂY
+// Ví dụ: {0x24, 0x0A, 0xC4, 0xXX, 0xXX, 0xXX}
+uint8_t broadcastAddress[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+
+typedef struct struct_message {
+  float temperature;
+  float humidity;
+  float lux;
+  int rainDO;
+  int rainAO;
+  int soilDO;
+  int soilAO;
+  int uvRaw;
+  float uvVoltage;
+} struct_message;
+
+struct_message myData;
+
+esp_now_peer_info_t peerInfo;
+
+void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
+  Serial.print("\r\nTrạng thái gửi gói tin gần nhất: ");
+  Serial.println(status == ESP_NOW_SEND_SUCCESS ? "Thành công" : "Thất bại");
+}
+
+void setup() {
+  Serial.begin(115200);
+  dht.begin();
+  pinMode(RAIN_DO, INPUT);
+  pinMode(SOIL_DO, INPUT);
+
+  Wire.begin(42, 45);
+
+  if (lightMeter.begin()) {
+    Serial.println("BH1750 OK");
+  } else {
+    Serial.println("BH1750 FAIL");
+  }
+
+  WiFi.mode(WIFI_STA);
+
+  if (esp_now_init() != ESP_OK) {
+    Serial.println("Lỗi khởi tạo ESP-NOW");
+    return;
+  }
+
+  esp_now_register_send_cb(OnDataSent);
+
+  memcpy(peerInfo.peer_addr, broadcastAddress, 6);
+  peerInfo.channel = 0;  
+  peerInfo.encrypt = false;
+  
+  if (esp_now_add_peer(&peerInfo) != ESP_OK){
+    Serial.println("Không thể thêm thiết bị nhận");
+    return;
+  }
+
+  Serial.println("ENV NODE READY");
+}
+
+void loop() {
+  Serial.println("\n===== ENV NODE =====");
+
+  float humidity = dht.readHumidity();
+  float temperature = dht.readTemperature();
+  if (!isnan(temperature) && !isnan(humidity)) {
+    myData.temperature = temperature;
+    myData.humidity = humidity;
+    Serial.printf("Temperature: %.2f C | Humidity: %.2f %%\n", temperature, humidity);
+  } else {
+    myData.temperature = 0.0;
+    myData.humidity = 0.0;
+  }
+
+  myData.lux = lightMeter.readLightLevel();
+  Serial.printf("Light: %.2f lux\n", myData.lux);
+
+  myData.rainDO = digitalRead(RAIN_DO);
+  myData.rainAO = analogRead(RAIN_AO);
+  Serial.printf("Rain DO: %d | AO: %d\n", myData.rainDO, myData.rainAO);
+
+  myData.soilDO = digitalRead(SOIL_DO);
+  myData.soilAO = analogRead(SOIL_AO);
+  Serial.printf("Soil DO: %d | AO: %d\n", myData.soilDO, myData.soilAO);
+
+  myData.uvRaw = analogRead(UV_PIN);
+  myData.uvVoltage = myData.uvRaw * 3.3 / 4095.0;
+  Serial.printf("UV Raw: %d | Voltage: %.2f V\n", myData.uvRaw, myData.uvVoltage);
+
+  esp_err_t result = esp_now_send(broadcastAddress, (uint8_t *) &myData, sizeof(myData));
+   
+  if (result == ESP_OK) {
+    Serial.println("Đã gửi lệnh truyền dữ liệu thành công");
+  } else {
+    Serial.println("Lỗi khi gửi dữ liệu");
+  }
+
+  delay(2000);
+}
