@@ -1,0 +1,44 @@
+#include <WiFi.h>
+#include <esp_now.h>
+
+typedef struct {
+  float temperature;
+  float humidity;
+} SensorData;
+
+SensorData incomingData;
+
+void OnDataRecv(
+  const esp_now_recv_info_t *info,
+  const uint8_t *data,
+  int len
+) {
+  memcpy(&incomingData, data, sizeof(incomingData));
+
+  Serial.println("=== DATA RECEIVED ===");
+
+  Serial.print("Temperature: ");
+  Serial.println(incomingData.temperature);
+
+  Serial.print("Humidity: ");
+  Serial.println(incomingData.humidity);
+}
+
+void setup() {
+
+  Serial.begin(115200);
+
+  WiFi.mode(WIFI_STA);
+
+  if (esp_now_init() != ESP_OK) {
+    Serial.println("ESP-NOW Init Failed");
+    return;
+  }
+
+  esp_now_register_recv_cb(OnDataRecv);
+
+  Serial.println("Receiver Ready");
+}
+
+void loop() {
+}
