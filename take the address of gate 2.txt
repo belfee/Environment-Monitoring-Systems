@@ -1,0 +1,12 @@
+#include <WiFi.h>
+
+void setup() {
+  Serial.begin(115200);
+  WiFi.mode(WIFI_STA);
+
+  uint8_t *mac = WiFi.macAddress().begin();
+
+  Serial.printf("MAC: %s\n", WiFi.macAddress().c_str());
+}
+
+void loop() {}
